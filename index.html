@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Howard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0f;
+      color: #e8e8f0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: background 0.5s;
+    }
+
+    /* ── Idle screen ── */
+    #idle-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .pulse-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: #1e1e2e;
+      border: 2px solid #2e2e4e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    .pulse-ring::after {
+      content: 'H';
+      font-size: 64px;
+      font-weight: 700;
+      color: #4f46e5;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2); }
+      50%       { box-shadow: 0 0 0 30px rgba(79, 70, 229, 0); }
+    }
+
+    .idle-label {
+      font-size: 18px;
+      color: #3d3d5e;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ── Greeting screen ── */
+    #greeting-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .howard-avatar {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+
+    .avatar-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: #4f46e5;
+      animation: avatarPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes avatarPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+      50%       { box-shadow: 0 0 0 20px rgba(79, 70, 229, 0); }
+    }
+
+    .avatar-letter {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 64px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .greeting-title {
+      font-size: 36px;
+      font-weight: 600;
+      color: #e8e8f0;
+      text-align: center;
+    }
+
+    .greeting-sub {
+      font-size: 18px;
+      color: #6b6b8a;
+      text-align: center;
+    }
+
+    .wake-indicator {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4f46e5;
+      animation: dotBounce 1.2s ease-in-out infinite;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40%            { transform: translateY(-8px); opacity: 1; }
+    }
+
+    /* ── Debug video (bottom right corner) ── */
+    #debug-video {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 240px;
+      border-radius: 8px;
+      border: 1px solid #1e1e2e;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Idle screen -->
+  <div id="idle-screen">
+    <div class="pulse-ring"></div>
+    <p class="idle-label">Approach to wake</p>
+  </div>
+
+  <!-- Greeting screen -->
+  <div id="greeting-screen">
+    <div class="howard-avatar">
+      <div class="avatar-ring"></div>
+      <span class="avatar-letter">H</span>
+    </div>
+    <h1 class="greeting-title">Hello, I am Howard.</h1>
+    <p class="greeting-sub">Your UKZN Computer Engineering receptionist.</p>
+    <div class="wake-indicator">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </div>
+
+  <!-- Debug camera feed (small, bottom right) -->
+  <img id="debug-video" src="/api/video" alt="camera feed" />
+
+  <script>
+    const idleScreen    = document.getElementById('idle-screen');
+    const greetScreen   = document.getElementById('greeting-screen');
+
+    const es = new EventSource('/api/events');
+
+    es.addEventListener('state', e => {
+      const state = e.data;
+
+      if (state === 'idle') {
+        idleScreen.style.display  = 'flex';
+        greetScreen.style.display = 'none';
+        document.body.style.background = '#0a0a0f';
+      }
+
+      if (state === 'greeting') {
+        idleScreen.style.display  = 'none';
+        greetScreen.style.display = 'flex';
+        document.body.style.background = '#0d0d1a';
+      }
+    });
+
+    // Get initial state on load
+    fetch('/api/state')
+      .then(r => r.json())
+      .then(d => {
+        const event = new MessageEvent('message', { data: d.state });
+        es.dispatchEvent(new MessageEvent('state', { data: d.state }));
+      });
+  </script>
+
+</body>
+</html>
